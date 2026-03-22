@@ -1,8 +1,8 @@
 {
   "warehouse": "bigquery",
   "defaultDatabase": "red-welder-443815-e2",
-  "defaultSchema": "marketing",
-  "assertionSchema": "marketing_assertions",
+  "defaultSchema": "marketing_dr_hedison",
+  "assertionSchema": "marketing_dr_hedison_assertions",
   "defaultLocation": "us-central1",
   "vars": {
     "ga4_property_id": "5109550760",
