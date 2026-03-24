@@ -9,9 +9,9 @@
     "ga4_export_project": "red-welder-443815-e2",
     "ga4_export_dataset": "analytics_5109550760",
     "ga4_export_table_suffix": "_*",
-    "ga4_incremental_processing_days_back": "3",
+    "ga4_incremental_processing_days_back": "180",
     "ads_export_data": "[{\"project\": \"red-welder-443815-e2\",\"dataset\": \"gads_datatransfer\", \"table_suffix\": \"_2094845137\"},{\"project\": \"red-welder-443815-e2\",\"dataset\": \"gads_datatransfer\",\"table_suffix\": \"_2094845137\"}]",
-  "ads_metrics_lookback_days": "365"
+  "ads_metrics_lookback_days": "180"
   }
 } 
     
