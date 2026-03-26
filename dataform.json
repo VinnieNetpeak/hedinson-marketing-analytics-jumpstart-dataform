@@ -5,9 +5,9 @@
   "assertionSchema": "marketing_dr_hedison_assertions",
   "defaultLocation": "us-central1",
   "vars": {
-    "ga4_property_id": "5109550760",
+    "ga4_property_id": "371007574",
     "ga4_export_project": "red-welder-443815-e2",
-    "ga4_export_dataset": "analytics_5109550760",
+    "ga4_export_dataset": "analytics_371007574",
     "ga4_export_table_suffix": "_*",
     "ga4_incremental_processing_days_back": "180",
     "ads_export_data": "[{\"project\": \"red-welder-443815-e2\",\"dataset\": \"gads_datatransfer\", \"table_suffix\": \"_2094845137\"},{\"project\": \"red-welder-443815-e2\",\"dataset\": \"gads_datatransfer\",\"table_suffix\": \"_2094845137\"}]",
