@@ -29,7 +29,7 @@ WITH landing AS (
     campaign_bidding_strategy_type,
     bid_s_name,
     bidding_strategy_type,
-    bidding_strategy_target_roas_target_roas,
+    target_roas,
     cost,
     revenue,
     data_date
@@ -65,7 +65,7 @@ SELECT
         l.campaign_bidding_strategy_type = w.campaign_bidding_strategy_type AND
         l.bid_s_name = w.bid_s_name AND
         l.bidding_strategy_type = w.bidding_strategy_type AND
-        l.bidding_strategy_target_roas_target_roas = w.target_roas AND
+        l.target_roas = w.target_roas AND
         l.cost = w.cost AND
         l.revenue = w.revenue
     ) THEN "MODIFY"
@@ -89,7 +89,7 @@ post_operations {
     campaign_bidding_strategy_type = t.l.campaign_bidding_strategy_type,
     bid_s_name = t.l.bid_s_name,
     bidding_strategy_type = t.l.bidding_strategy_type,
-    target_roas = SAFE_CAST(t.l.bidding_strategy_target_roas_target_roas AS NUMERIC),
+    target_roas = SAFE_CAST(t.l.target_roas AS NUMERIC),
     cost = SAFE_CAST(t.l.cost AS NUMERIC),
     revenue = SAFE_CAST(t.l.revenue AS NUMERIC)
 
@@ -109,7 +109,7 @@ post_operations {
     l.campaign_bidding_strategy_type AS campaign_bidding_strategy_type,
     l.bid_s_name AS bid_s_name,
     l.bidding_strategy_type AS bidding_strategy_type,
-    SAFE_CAST(l.bidding_strategy_target_roas_target_roas AS NUMERIC) AS target_roas,
+    SAFE_CAST(l.target_roas AS NUMERIC) AS target_roas,
     SAFE_CAST(l.cost AS NUMERIC) AS cost,
     SAFE_CAST(l.revenue AS NUMERIC) AS revenue,
     l.data_date AS data_date
