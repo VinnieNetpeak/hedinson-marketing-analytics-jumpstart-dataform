@@ -3,7 +3,7 @@
   "defaultDatabase": "red-welder-443815-e2",
   "defaultSchema": "marketing_dr_hedison",
   "assertionSchema": "marketing_dr_hedison_assertions",
-  "defaultLocation": "us-central1",
+  "defaultLocation": "US",
   "vars": {
     "ga4_property_id": "371007574",
     "ga4_export_project": "red-welder-443815-e2",
