@@ -10,6 +10,7 @@
     "ga4_export_dataset": "analytics_371007574",
     "ga4_export_table_suffix": "_*",
     "ga4_incremental_processing_days_back": "30",
+    "ga4_metrics_lookback_days": "30",
     "ads_export_data": "[{\"project\": \"red-welder-443815-e2\",\"dataset\": \"gads_datatransfer\", \"table_suffix\": \"_2094845137\"},{\"project\": \"red-welder-443815-e2\",\"dataset\": \"gads_datatransfer\",\"table_suffix\": \"_2094845137\"}]",
   "ads_metrics_lookback_days": "30"
   }
