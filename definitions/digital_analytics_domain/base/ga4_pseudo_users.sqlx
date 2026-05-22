@@ -12,34 +12,95 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * OPTIMIZED VERSION — what changed vs. original:
+ *   1) type "view" -> "incremental": матеріалізується, downstream MERGE більше
+ *      не пересканює всю історію щоразу.
+ *   2) ДОДАНО фільтр по даті (в оригіналі його НЕ було -> читалась ВСЯ історія
+ *      pseudonymous_users_* при кожному зверненні). Тепер:
+ *        - full refresh / перша збірка = вся історія (як раніше),
+ *        - incremental-запуск = лише останні N шардів.
+ *   3) partitionBy export_date (= дата шарду) + clusterBy: pruning на читання,
+ *      DELETE та MERGE.
+ *   4) preOperations DELETE recent partitions + insert (delete+insert):
+ *      reprocess останніх N днів без дублів; партиція 1:1 мапиться на шард,
+ *      тому видалення/вставка точні.
+ *   5) REGEXP_CONTAINS(_TABLE_SUFFIX, r'^[0-9]{8}$') відсікає intraday/fresh
+ *      суфікси й захищає PARSE_DATE від падіння.
+ * ───────────────────────────────────────────────────────────────────────────
  */
 js {
-  function intEventParam(parameter) {
-    return '(SELECT ep.value.int_value FROM UNNEST(event_params) ep WHERE ep.key = "'
-    + parameter + '" LIMIT 1)';
-  }
-  function stringEventParam(parameter) {
-    return '(SELECT ep.value.string_value FROM UNNEST(event_params) ep WHERE ep.key = "'
-    + parameter + '" LIMIT 1)';
-  }
   function stripNotSet(expression, columnName) {
-    if(typeof columnName === 'undefined') {
+    if (typeof columnName === 'undefined') {
       columnName = expression;
     }
-    return 'CASE WHEN ' + expression + '="(not set)" THEN "" ELSE ' + expression + ' END as ' + columnName
+    return 'CASE WHEN ' + expression + '="(not set)" THEN "" ELSE ' + expression + ' END as ' + columnName;
   }
   function notNullString(column, columnName) {
     return 'COALESCE(' + column + ', "") as ' + columnName;
   }
+  // Скільки шардів/партицій перебудовувати на incremental-запуску (тримай малим).
+  const incrementalDaysBack = 3;
 }
 
-config { 
-  type: "view",
+config {
+  type: "incremental",
   schema: functions.baseSchema("ga4"),
   columns: docs.ga4_events,
-  description: "View into GA4 exported tables. Not be used outside of the Dataform transformation jobs.",
-  tags: ['ga4']
+  description: "Incremental, partitioned materialization of GA4 pseudonymous_users export. Internal to Dataform transforms.",
+  tags: ['ga4'],
+  bigquery: {
+    partitionBy: "export_date",
+    clusterBy: ["pseudo_user_id", "stream_id"]
+  }
 }
+
+pre_operations {
+  -- На incremental-запуску видаляємо партиції (== шарди) останніх N днів перед вставкою,
+  -- щоб повторна обробка не давала дублів. Фільтр по export_date => partition pruning.
+  ${when(incremental(),
+    `DELETE FROM ${self()}
+     WHERE export_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${incrementalDaysBack} DAY)`
+  )}
+}
+
+WITH raw_users AS (
+  SELECT
+    pseudo_user_id,
+    stream_id,
+    user_info.last_active_timestamp_micros as user_last_active_timestamp_micros,
+    user_info.user_first_touch_timestamp_micros as user_first_touch_timestamp_micros,
+    user_info.first_purchase_date as user_first_purchase_date,
+    device.operating_system as device_os,
+    device.category as device_category,
+    device.mobile_brand_name as device_mobile_brand_name,
+    device.mobile_model_name as device_mobile_model_name,
+    device.unified_screen_name as device_unified_screen_name,
+    geo.city as city,
+    geo.country as country,
+    geo.continent as continent,
+    geo.region as region,
+    audiences.id as audiences_id,
+    audiences.name as audiences_name,
+    audiences.membership_start_timestamp_micros as audiences_membership_start_timestamp_micros,
+    audiences.membership_expiry_timestamp_micros as audiences_membership_expiry_timestamp_micros,
+    audiences.npa as audiences_non_personalized_ads_user,
+    user_ltv,
+    predictions,
+    privacy_info,
+    PARSE_DATE('%Y%m%d', occurrence_date) as last_change_date,
+    PARSE_DATE('%Y%m%d', last_updated_date) as last_updated_date,
+    _TABLE_SUFFIX as table_suffix,
+    PARSE_DATE('%Y%m%d', _TABLE_SUFFIX) as export_date
+  FROM ${ref('pseudonymous_users' + dataform.projectConfig.vars.ga4_export_table_suffix)}, UNNEST(audiences) as audiences
+  -- Відсікаємо intraday/fresh та будь-які не-YYYYMMDD суфікси (захист PARSE_DATE).
+  WHERE REGEXP_CONTAINS(_TABLE_SUFFIX, r'^[0-9]{8}$')
+  -- На incremental-запуску читаємо лише останні N шардів (основна економія байтів).
+  ${when(incremental(),
+    `AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL ${incrementalDaysBack} DAY))`
+  )}
+)
 
 SELECT
   pseudo_user_id,
@@ -54,11 +115,11 @@ SELECT
   ${notNullString('device_os','device_os')},
   ${notNullString('device_unified_screen_name','device_unified_screen_name')},
   --geo dimension
-  ${stripNotSet('continent')}, 
+  ${stripNotSet('continent')},
   ${stripNotSet('country')},
   ${stripNotSet('region')},
   ${stripNotSet('city')},
-  --audiences dimension 
+  --audiences dimension
   STRUCT(
       audiences_id as id,
       ${notNullString('audiences_name', 'name')},
@@ -86,33 +147,6 @@ SELECT
   privacy_info.is_ads_personalization_allowed = 'true' as ads_personalization_allowed,
   last_change_date,
   last_updated_date,
-  table_suffix
-FROM (
-SELECT
-    pseudo_user_id,
-    stream_id,
-    user_info.last_active_timestamp_micros as user_last_active_timestamp_micros,
-    user_info.user_first_touch_timestamp_micros as user_first_touch_timestamp_micros,
-    user_info.first_purchase_date as user_first_purchase_date,
-    device.operating_system as device_os,
-    device.category as device_category,
-    device.mobile_brand_name as device_mobile_brand_name,
-    device.mobile_model_name as device_mobile_model_name,
-    device.unified_screen_name as device_unified_screen_name,
-    geo.city as city,
-    geo.country as country,
-    geo.continent as continent,
-    geo.region as region,
-    audiences.id as audiences_id,
-    audiences.name as audiences_name,
-    audiences.membership_start_timestamp_micros as audiences_membership_start_timestamp_micros,
-    audiences.membership_expiry_timestamp_micros as audiences_membership_expiry_timestamp_micros,
-    audiences.npa as audiences_non_personalized_ads_user,
-    user_ltv,
-    predictions,
-    privacy_info,
-    PARSE_DATE('%Y%m%d', occurrence_date) as last_change_date,
-    PARSE_DATE('%Y%m%d', last_updated_date) as last_updated_date,
-    _TABLE_SUFFIX as table_suffix
-FROM ${ref('pseudonymous_users' + dataform.projectConfig.vars.ga4_export_table_suffix)}, UNNEST(audiences) as audiences
-)
+  table_suffix,
+  export_date
+FROM raw_users 
