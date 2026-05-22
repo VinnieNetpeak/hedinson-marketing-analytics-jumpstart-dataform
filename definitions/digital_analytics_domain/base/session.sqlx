@@ -23,6 +23,7 @@ config {
     },
     bigquery: {
         // TODO: clustering on this table are best estimates
+        partitionBy: "DATE(session_start)",
         clusterBy: ["session_start", "user_pseudo_id"]
     },
     tags: ["ga4"]

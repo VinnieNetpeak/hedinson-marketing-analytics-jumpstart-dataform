@@ -22,6 +22,7 @@ publish("normalized_device_type", {
   description: "Normalized device dimension",
   uniqueKey: uniqueColumns,
   bigquery: {
+    partitionBy: "DATE(created_ts)",
     clusterBy: ["normalized_device_type_id"]
   },
   tags: ['ga4']

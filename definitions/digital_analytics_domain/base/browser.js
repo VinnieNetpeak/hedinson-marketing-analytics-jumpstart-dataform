@@ -22,6 +22,7 @@ publish("browser", {
   description: "Browser dimension",
   uniqueKey: uniqueColumns,
   bigquery: {
+    partitionBy: "DATE(created_ts)",
     clusterBy: ["browser_id"]
   },
   tags: ['ga4']
