@@ -19,6 +19,7 @@ config {
   description: "Traffic source dimension",
   uniqueKey: ga4.trafficSourceUniqueColumns,
   bigquery: {
+    partitionBy: "DATE(created_ts)",
     clusterBy: ["traffic_source_id"]
   },
   tags: ['ga4']
