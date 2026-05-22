@@ -22,6 +22,7 @@ publish("location", {
   description: "Location dimension",
   uniqueKey: uniqueColumns,
   bigquery: {
+    partitionBy: "DATE(created_ts)",
     clusterBy: ["location_id"]
   },
   tags: ['ga4']
