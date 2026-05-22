@@ -46,7 +46,7 @@ FROM source
     ${sql.multiColumnEqualsClause('source', 'target', ga4.pseudoUserPrivacyInfoUniqueColumns)}
   )
   ` )}
-  
+   
 post_operations {
   ${when(incremental(), 'SELECT "ignore_it"', 
     `ALTER TABLE ${self()} ADD PRIMARY KEY (privacy_info_id) NOT ENFORCED;` )}
