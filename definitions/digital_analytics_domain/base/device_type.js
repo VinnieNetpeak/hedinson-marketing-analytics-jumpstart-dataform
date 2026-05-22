@@ -22,21 +22,26 @@ publish("device_type", {
   description: "Device dimension",
   uniqueKey: uniqueColumns,
   bigquery: {
-    clusterBy: ["device_type_id"]
+  partitionBy: "DATE(created_ts)",
+  clusterBy: ["device_type_id"]
   },
   tags: ['ga4']
-  }).query(ctx => 
-  `WITH source AS
-  (SELECT DISTINCT
-    ${uniqueColumns}
-  FROM ${ctx.ref("ga4_events")}
-  ${ctx.when(ctx.incremental(), `WHERE table_suffix BETWEEN '${ga4.incrementalSuffixStart()}' and '${ga4.incrementalSuffixEnd()}'` )}
+  }).query(ctx => `
+  WITH source AS (
+    SELECT
+      ${uniqueColumns}
+    FROM ${ctx.ref("ga4_events")}
+    WHERE event_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+      ${ctx.when(ctx.incremental(), `
+        AND event_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+                          AND CURRENT_DATE()
+      `)}
   )
-SELECT GENERATE_UUID() as device_type_id, source.*, CURRENT_TIMESTAMP() as created_ts FROM source
-  ${ctx.when(ctx.incremental(), `
-  WHERE NOT EXISTS(
-    SELECT * FROM ${ctx.self()} target WHERE
-    ${sql.multiColumnEqualsClause('source', 'target', uniqueColumns)}
-  )
-  ` )}
-  `);
+
+  SELECT
+    GENERATE_UUID() AS device_type_id,
+    source.*,
+    CURRENT_TIMESTAMP() AS created_ts
+  FROM source
+  GROUP BY ${uniqueColumns}
+`);
