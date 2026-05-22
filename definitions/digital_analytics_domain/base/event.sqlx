@@ -29,8 +29,7 @@ config {
     ]
   },
   bigquery: {
-    // TODO: Partionioning and clustering on this table are best estimates
-    partitionBy: "DATETIME_TRUNC(event_timestamp, DAY)",
+    partitionBy: "event_date",
     clusterBy: ["ga_session_id", "user_pseudo_id", "event_name"]
   },
   tags: ['ga4']
@@ -47,7 +46,7 @@ post_operations {
   -- Remove data not needed according to settings.
   ${when(incremental(), `DECLARE latest_datetime DATETIME;
     SET latest_date = (
-      SELECT MAX(DATETIME_TRUNC(event_timestamp, DAY))
+      SELECT MAX(event_date)
       FROM ${self()}
     )`,
   `DELETE FROM ${self()}
@@ -66,6 +65,7 @@ post_operations {
       ELSE '${ga4.eventTypeCustom}' END as event_type,
     ${ga4.eventUniqueColumns},
     platform,
+    event_date,
     stream_id,
     ga_session_number,
     user_id as user_id,
