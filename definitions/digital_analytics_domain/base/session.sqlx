@@ -56,3 +56,4 @@ SELECT * EXCEPT(earliest_checkout, latest_purchase),
     latest_purchase IS NOT NULL as has_purchase_event,
     COALESCE(earliest_checkout < latest_purchase, false) as has_valid_purchase
     FROM session_details
+ 

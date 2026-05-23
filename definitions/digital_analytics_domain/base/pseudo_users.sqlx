@@ -52,7 +52,7 @@ ${when(incremental(), `WHERE table_suffix BETWEEN '${ga4.incrementalSuffixStart(
     ${sql.multiColumnEqualsClause('source', 'target', ga4.pseudoUsersUniqueColumns)}
     )`
     ) }
-  
+   
 post_operations {
   ${when(! incremental(), `ALTER TABLE ${self()} ADD PRIMARY KEY (pseudo_user_id) NOT ENFORCED;` )}
   ALTER TABLE ${self()} ADD CONSTRAINT IF NOT EXISTS 
