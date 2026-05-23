@@ -19,8 +19,5 @@ config {
   tags: ['ga4']
 }
 
-SELECT 
-  *,
-  event_date,
- FROM ${ref({schema: functions.baseSchema("ga4"), name: "event"})}
+SELECT * FROM ${ref({schema: functions.baseSchema("ga4"), name: "event"})}
   
