@@ -21,6 +21,6 @@ config {
 
 SELECT 
   *,
-  EXTRACT(date from event_timestamp) as event_date,
+  event_date,
  FROM ${ref({schema: functions.baseSchema("ga4"), name: "event"})}
   
