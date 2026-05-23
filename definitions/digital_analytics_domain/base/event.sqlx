@@ -42,27 +42,22 @@ pre_operations {
   'SELECT "ignore_it"')
     }
 }
-post_operations {
-  -- Remove data not needed according to settings.
-  ${when(incremental(), `DECLARE latest_datetime DATETIME;
-    SET latest_date = (
-      SELECT MAX(event_date)
-      FROM ${self()}
-    )`,
-  `DELETE FROM ${self()}
-    WHERE DATETIME_TRUNC(event_timestamp, DAY)
-      < DATETIME_SUB(
-        latest_datetime,
-        INTERVAL ${dataform.projectConfig.vars.ga4_metrics_lookback_days} DAY
-      )`)
-    }
 }
   SELECT
     GENERATE_UUID() as event_id,
-    CASE 
-      WHEN ga_session_id IS NOT NULL THEN '${ga4.eventTypeTagged}'
-      WHEN event_name IN UNNEST(['predict_ltv_payer', 'predicted_top_spenders']) THEN '${ga4.eventTypePredicted}'
-      ELSE '${ga4.eventTypeCustom}' END as event_type,
+    CASE
+      WHEN ga_session_id IS NOT NULL
+        AND t.traffic_source_id IS NOT NULL
+        AND d.device_type_id IS NOT NULL
+        AND nd.normalized_device_type_id IS NOT NULL
+      THEN '${ga4.eventTypeTagged}'
+      WHEN event_name IN UNNEST([
+        'predict_ltv_payer',
+        'predicted_top_spenders'
+      ])
+      THEN '${ga4.eventTypePredicted}'
+      ELSE '${ga4.eventTypeCustom}'
+    END AS event_type,
     ${ga4.eventUniqueColumns},
     platform,
     event_date,
