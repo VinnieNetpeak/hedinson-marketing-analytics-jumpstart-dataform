@@ -22,7 +22,7 @@ config {
   assertions: {
     rowConditions: [
       'IF(event_type = "' + ga4.eventTypeTagged + '", ga_session_id IS NOT NULL, true)',
-      'IF(event_type != "' + ga4.eventTypeTagged + '", ga_session_id IS NULL, true)',
+      'IF(event_type = "' + ga4.eventTypeTagged + '", ga_session_id IS NOT NULL, true)',
       'IF(event_type = "' + ga4.eventTypeTagged + '", device_type_id IS NOT NULL, true)',
       'IF(event_type = "' + ga4.eventTypeTagged + '", normalized_device_type_id IS NOT NULL, true)',
       'IF(event_type = "' + ga4.eventTypeTagged + '", traffic_source_id IS NOT NULL, true)',
@@ -41,7 +41,6 @@ pre_operations {
   ADD COLUMN IF NOT EXISTS collected_traffic_source_id STRING`,
   'SELECT "ignore_it"')
     }
-}
 }
   SELECT
     GENERATE_UUID() as event_id,
@@ -95,10 +94,15 @@ pre_operations {
   LEFT JOIN ( SELECT * FROM ${ref(functions.baseSchema("ga4"),"normalized_device_type")} ) nd
     USING (${ga4.normalizedDeviceUniqueColumns})
   ${when(incremental(), `WHERE table_suffix BETWEEN '${ga4.incrementalSuffixStart()}' and '${ga4.incrementalSuffixEnd()}'
-    AND NOT EXISTS(
-    SELECT * FROM ${self()} target WHERE
-    ${sql.multiColumnEqualsClause('source', 'target', ga4.eventUniqueColumns)}
-                  )` )}
+  AND NOT EXISTS (
+    SELECT 1
+    FROM ${self()} target
+    WHERE ${sql.multiColumnEqualsClause(
+      'source',
+      'target',
+      ga4.eventUniqueColumns
+    )}
+  )` )}
   
 post_operations {
   ${when(! incremental(), `ALTER TABLE ${self()} ADD PRIMARY KEY (event_id) NOT ENFORCED;` )}
